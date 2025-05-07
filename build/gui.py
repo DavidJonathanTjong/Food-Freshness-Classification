@@ -1,6 +1,6 @@
 from pathlib import Path
 # from tkinter import *
-from tkinter import Tk, Canvas, Entry, Text, Button, PhotoImage
+from tkinter import Tk, Canvas, Entry, Text, Button, PhotoImage, font
 from tkinter import filedialog
 from PIL import Image, ImageTk, ImageEnhance
 import numpy as np
@@ -44,6 +44,8 @@ def relative_to_datasets(path: str) -> Path:
 
 image = None
 brightness_level = 1.0
+model_choices = 0
+model = None
 
 def openFile():
     filepath = filedialog.askopenfilename(filetypes=(("Image files", "*.jpg *.png *.jpeg"),("All files", "*.*")))
@@ -105,12 +107,8 @@ def brightness_down():
 
 # model
 def model_rf():
-    from keras.preprocessing import image as keras_image 
-
-    global image 
-    if image is None:
-        print("Tidak ada gambar untuk diprediksi.")
-        return
+    global model_choices 
+    model_choices = 1
 
     # Image generator untuk preprocessing
     datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
@@ -159,33 +157,14 @@ def model_rf():
     canvas.itemconfig(recall, text=f"Recall: {recall_val:.2f}")
     canvas.itemconfig(precision, text=f"Precision: {precision_val:.2f}")
     canvas.itemconfig(penjelasan_model, text="Model memanfaatkan fitur citra secara langsung.")
-
-    # Load dan preprocess gambar untuk prediksi
-    if image.mode == 'RGBA':
-        image = image.convert('RGB')
-
-    # Preprocess gambar
-    user_img = image.resize((150, 150))  # resize seperti data latih
-    img_array = img_to_array(user_img) / 255.0
-    img_array = img_array.reshape(1, -1) 
-
-    # Prediksi gambar
-    pred = rf_model.predict(img_array)[0]
-    prob = rf_model.predict_proba(img_array)[0][1]
-    label = 'Fresh' if pred == 1 else 'Rotten'
-
-    # Hasil Prediksi
-    canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
-    canvas.itemconfig(kesimpulan, text=f"{label} Food")
+    
+    global model 
+    model = rf_model
 
 def model_knn():
+    global model_choices 
+    model_choices = 2
     # from keras.preprocessing import image as keras_image 
-
-    global image 
-    if image is None:
-        print("Tidak ada gambar untuk diprediksi.")
-        return
-
     # Image generator untuk preprocessing
     datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
     train_generator = datagen.flow_from_directory(
@@ -233,29 +212,12 @@ def model_knn():
     canvas.itemconfig(precision, text=f"Precision: {precision_val:.2f}")
     canvas.itemconfig(penjelasan_model, text="Model knn secara langsung.")
 
-    # Load dan preprocess gambar untuk prediksi
-    if image.mode == 'RGBA':
-        image = image.convert('RGB')
-
-    # Preprocess gambar
-    user_img = image.resize((150, 150))  # resize seperti data latih
-    img_array = img_to_array(user_img) / 255.0
-    img_array = img_array.reshape(1, -1) 
-
-    # Prediksi gambar
-    pred = knn_model.predict(img_array)[0]
-    prob = knn_model.predict_proba(img_array)[0][1]
-    label = 'Fresh' if pred == 1 else 'Rotten'
-
-    # Hasil Prediksi
-    canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
-    canvas.itemconfig(kesimpulan, text=f"{label} Food")
+    global model 
+    model = knn_model
 
 def model_decisionTree():
-    global image 
-    if image is None:
-        print("Tidak ada gambar untuk diprediksi.")
-        return
+    global model_choices 
+    model_choices = 3
     
     # Image generator untuk preprocessing
     datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
@@ -288,7 +250,7 @@ def model_decisionTree():
     # Decision Tree Classifier
     dt_model = DecisionTreeClassifier(random_state=42)
     dt_model.fit(x_train_flat, y_train)
-
+    
     # Prediksi
     y_pred = dt_model.predict(x_val_flat)
 
@@ -304,29 +266,12 @@ def model_decisionTree():
     canvas.itemconfig(precision, text=f"Precision: {precision_val:.2f}")
     canvas.itemconfig(penjelasan_model, text="Model DT secara langsung.")
 
-    # Load dan preprocess gambar untuk prediksi
-    if image.mode == 'RGBA':
-        image = image.convert('RGB')
-
-    # Preprocess gambar
-    user_img = image.resize((150, 150))  # resize seperti data latih
-    img_array = img_to_array(user_img) / 255.0
-    img_array = img_array.reshape(1, -1) 
-
-    # Prediksi gambar
-    pred = dt_model.predict(img_array)[0]
-    prob = dt_model.predict_proba(img_array)[0][1]
-    label = 'Fresh' if pred == 1 else 'Rotten'
-
-    # Hasil Prediksi
-    canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
-    canvas.itemconfig(kesimpulan, text=f"{label} Food")
+    global model 
+    model = dt_model
 
 def model_svm():
-    global image 
-    if image is None:
-        print("Tidak ada gambar untuk diprediksi.")
-        return
+    global model_choices 
+    model_choices = 4
     
     # Image generator untuk preprocessing
     datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
@@ -375,29 +320,12 @@ def model_svm():
     canvas.itemconfig(precision, text=f"Precision: {precision_val:.2f}")
     canvas.itemconfig(penjelasan_model, text="Model SVM secara langsung.")
 
-    # Load dan preprocess gambar untuk prediksi
-    if image.mode == 'RGBA':
-        image = image.convert('RGB')
-
-    # Preprocess gambar
-    user_img = image.resize((150, 150))  # resize seperti data latih
-    img_array = img_to_array(user_img) / 255.0
-    img_array = img_array.reshape(1, -1) 
-
-    # Prediksi gambar
-    pred = svm_model.predict(img_array)[0]
-    prob = svm_model.predict_proba(img_array)[0][1]
-    label = 'Fresh' if pred == 1 else 'Rotten'
-
-    # Hasil Prediksi
-    canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
-    canvas.itemconfig(kesimpulan, text=f"{label} Food")
+    global model 
+    model = svm_model
 
 def model_naivebayes():
-    global image 
-    if image is None:
-        print("Tidak ada gambar untuk diprediksi.")
-        return
+    global model_choices 
+    model_choices = 5
     
     # Image generator untuk preprocessing
     datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
@@ -446,32 +374,13 @@ def model_naivebayes():
     canvas.itemconfig(recall, text=f"Recall: {recall_val:.2f}")
     canvas.itemconfig(precision, text=f"Precision: {precision_val:.2f}")
     canvas.itemconfig(penjelasan_model, text="Model NaiveBayes secara langsung.")
-
-    # Load dan preprocess gambar untuk prediksi
-    if image.mode == 'RGBA':
-        image = image.convert('RGB')
-
-    # Preprocess gambar
-    user_img = image.resize((150, 150))  # resize seperti data latih
-    img_array = img_to_array(user_img) / 255.0
-    img_array = img_array.reshape(1, -1) 
-
-    # Prediksi gambar
-    pred = nb_model.predict(img_array)[0]
-    prob = nb_model.predict_proba(img_array)[0][1]
-    label = 'Fresh' if pred == 1 else 'Rotten'
-
-    print (f"{prob}")
-
-    # Hasil Prediksi
-    canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
-    canvas.itemconfig(kesimpulan, text=f"{label} Food")
+    
+    global model 
+    model = nb_model
 
 def model_logisticregression():
-    global image 
-    if image is None:
-        print("Tidak ada gambar untuk diprediksi.")
-        return
+    global model_choices 
+    model_choices = 6
     
     # Image generator untuk preprocessing
     datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
@@ -514,35 +423,18 @@ def model_logisticregression():
     recall_val = recall_score(y_val, y_pred)
 
     # Update penjelasan model
-    canvas.itemconfig(nama_model, text="Model Logistic Regression")
+    canvas.itemconfig(nama_model, text="Model LR")
     canvas.itemconfig(akurasi_model, text=f"Akurasi Model: {accuracy:.2f}")
     canvas.itemconfig(recall, text=f"Recall: {recall_val:.2f}")
     canvas.itemconfig(precision, text=f"Precision: {precision_val:.2f}")
     canvas.itemconfig(penjelasan_model, text="Model LR secara langsung.")
 
-    # Load dan preprocess gambar untuk prediksi
-    if image.mode == 'RGBA':
-        image = image.convert('RGB')
-
-    # Preprocess gambar
-    user_img = image.resize((150, 150))  # resize seperti data latih
-    img_array = img_to_array(user_img) / 255.0
-    img_array = img_array.reshape(1, -1) 
-
-    # Prediksi gambar
-    pred = lr_model.predict(img_array)[0]
-    prob = lr_model.predict_proba(img_array)[0][1]
-    label = 'Fresh' if pred == 1 else 'Rotten'
-
-    # Hasil Prediksi
-    canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
-    canvas.itemconfig(kesimpulan, text=f"{label} Food")
+    global model 
+    model = lr_model
 
 def model_cnn():
-    global image  
-    if image is None:
-        print("Tidak ada gambar untuk diprediksi.")
-        return
+    global model_choices 
+    model_choices = 7
 
     # Augmentasi dan preprocessing
     datagen = ImageDataGenerator(
@@ -566,7 +458,7 @@ def model_cnn():
         subset='validation'
     )
 
-    model = Sequential([
+    model_cnn = Sequential([
         Conv2D(32, (3,3), activation='relu', input_shape=(150, 150, 3)),
         MaxPooling2D(2,2),
 
@@ -579,11 +471,11 @@ def model_cnn():
         Dense(1, activation='sigmoid')
     ])
 
-    model.compile(optimizer='adam',
+    model_cnn.compile(optimizer='adam',
                 loss='binary_crossentropy',
                 metrics=['accuracy'])
 
-    history = model.fit(
+    model_cnn.fit(
         train_generator,
         epochs=10,
         validation_data=val_generator
@@ -591,7 +483,7 @@ def model_cnn():
 
     # Evaluasi model
     val_generator.reset()
-    y_pred_prob = model.predict(val_generator)
+    y_pred_prob = model_cnn.predict(val_generator)
     y_pred = (y_pred_prob > 0.5).astype(int)
     y_true = val_generator.classes
 
@@ -606,29 +498,13 @@ def model_cnn():
     canvas.itemconfig(recall, text=f"Recall: {recall_score:.2f}")
     canvas.itemconfig(precision, text=f"Precision: {precision_score:.2f}")
     canvas.itemconfig(penjelasan_model, text="Model CNN diproses deep learning")
-
-    # Preprocess gambar dari canvas
-    if image.mode == 'RGBA':
-        image = image.convert('RGB')
     
-    img_resized = image.resize((150, 150))
-    img_array = img_to_array(img_resized)
-    img_array = np.expand_dims(img_array, axis=0) / 255.0
-    pred = model.predict(img_array)[0][0]
-    if pred > 0.5:
-        result_text = "Fresh Food"
-    else:
-        result_text = "Spoiled Food"
-
-    # Update penjelasan prediksi
-    canvas.itemconfig(akurasi, text=f"Akurasi: {pred:.2f}")
-    canvas.itemconfig(kesimpulan, text=f"Kesimpulan: {result_text}")
+    global model 
+    model = model_cnn
 
 def model_rnn():
-    global image 
-    if image is None:
-        print("Tidak ada gambar untuk diprediksi.")
-        return
+    global model_choices 
+    model_choices = 8
     
     # Image generator untuk preprocessing
     datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
@@ -660,19 +536,19 @@ def model_rnn():
     x_val_rnn = x_val.reshape((x_val.shape[0], 150, 150*3))
 
     # Bangun model RNN
-    model = Sequential([
+    model_rnn = Sequential([
         SimpleRNN(64, input_shape=(150, 150*3), activation='tanh'),
         Dense(32, activation='relu'),
         Dense(1, activation='sigmoid')
     ])
 
-    model.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+    model_rnn.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
 
     # Latih model
-    model.fit(x_train_rnn, y_train, epochs=10, validation_data=(x_val_rnn, y_val), verbose=2)
+    model_rnn.fit(x_train_rnn, y_train, epochs=10, validation_data=(x_val_rnn, y_val), verbose=2)
 
     # Prediksi
-    y_prob = model.predict(x_val_rnn).flatten()
+    y_prob = model_rnn.predict(x_val_rnn).flatten()
     y_pred = (y_prob > 0.5).astype(int)
 
     # Evaluasi
@@ -686,29 +562,13 @@ def model_rnn():
     canvas.itemconfig(recall, text=f"Recall: {recall_val:.2f}")
     canvas.itemconfig(precision, text=f"Precision: {precision_val:.2f}")
     canvas.itemconfig(penjelasan_model, text="Model RNN secara langsung.")
-
-    # Load dan preprocess gambar untuk prediksi
-    if image.mode == 'RGBA':
-        image = image.convert('RGB')
-
-    img = image.resize((150, 150))
-    img_array = img_to_array(img) / 255.0
-    img_array = img_array.reshape(1, 150, 150 * 3)  # (batch_size, timesteps, features)
-
-    # Prediksi gambar user
-    prob = model.predict(img_array)[0][0]
-    pred = int(prob > 0.5)
-    label = 'Fresh' if pred == 1 else 'Spoiled'
-
-    # Tampilkan hasil
-    canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
-    canvas.itemconfig(kesimpulan, text=f"{label} Food")
+    
+    global model 
+    model = model_rnn
 
 def model_lstm():
-    global image 
-    if image is None:
-        print("Tidak ada gambar untuk diprediksi.")
-        return
+    global model_choices 
+    model_choices = 9
     
     # Image generator untuk preprocessing
     datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
@@ -739,19 +599,19 @@ def model_lstm():
     x_val_lstm = x_val.reshape((x_val.shape[0], 150, 150*3))
 
     # Bangun model LSTM
-    model = Sequential([
+    model_lstm = Sequential([
         LSTM(64, input_shape=(150, 150*3), activation='tanh'),
         Dense(32, activation='relu'),
         Dense(1, activation='sigmoid')
     ])
 
-    model.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+    model_lstm.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
 
     # Latih model
-    model.fit(x_train_lstm, y_train, epochs=10, validation_data=(x_val_lstm, y_val), verbose=2)
+    model_lstm.fit(x_train_lstm, y_train, epochs=10, validation_data=(x_val_lstm, y_val), verbose=2)
 
     # Prediksi
-    y_prob = model.predict(x_val_lstm).flatten()
+    y_prob = model_lstm.predict(x_val_lstm).flatten()
     y_pred = (y_prob > 0.5).astype(int)
 
     # Evaluasi
@@ -765,31 +625,15 @@ def model_lstm():
     canvas.itemconfig(recall, text=f"Recall: {recall_val:.2f}")
     canvas.itemconfig(precision, text=f"Precision: {precision_val:.2f}")
     canvas.itemconfig(penjelasan_model, text="Model LSTM secara langsung.")
-
-    # Load dan preprocess gambar untuk prediksi
-    if image.mode == 'RGBA':
-        image = image.convert('RGB')
-
-    img = image.resize((150, 150))
-    img_array = img_to_array(img) / 255.0
-    img_array = img_array.reshape(1, 150, 150 * 3)  # (batch_size, timesteps, features)
-
-    # Prediksi gambar user
-    prob = model.predict(img_array)[0][0]
-    pred = int(prob > 0.5)
-    label = 'Fresh' if pred == 1 else 'Spoiled'
-
-    # Tampilkan hasil
-    canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
-    canvas.itemconfig(kesimpulan, text=f"{label} Food")
+    
+    global model 
+    model = model_lstm
 
 def model_mobileNet():
-    from tensorflow.keras.models import Model
+    global model_choices 
+    model_choices = 10
 
-    global image 
-    if image is None:
-        print("Tidak ada gambar untuk diprediksi.")
-        return
+    from tensorflow.keras.models import Model
     
     # Image generator untuk preprocessing
     datagen = ImageDataGenerator(preprocessing_function=preprocess_input, validation_split=0.2)
@@ -825,13 +669,13 @@ def model_mobileNet():
     x = Dense(32, activation='relu')(x)
     predictions = Dense(1, activation='sigmoid')(x)
 
-    model = Model(inputs=base_model.input, outputs=predictions)
+    model_mobileNet = Model(inputs=base_model.input, outputs=predictions)
 
     # Compile model
-    model.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+    model_mobileNet.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
 
     # Latih model
-    model.fit(train_generator, epochs=10, validation_data=val_generator, verbose=2)
+    model_mobileNet.fit(train_generator, epochs=10, validation_data=val_generator, verbose=2)
 
     # Evaluasi model
     # Ambil semua data dari validation generator
@@ -845,7 +689,7 @@ def model_mobileNet():
     y_val = np.array(y_val)
 
     # Prediksi dan evaluasi model
-    y_prob = model.predict(x_val).flatten()
+    y_prob = model_mobileNet.predict(x_val).flatten()
     y_pred = (y_prob > 0.5).astype(int)
 
     # Evaluasi
@@ -860,32 +704,83 @@ def model_mobileNet():
     canvas.itemconfig(precision, text=f"Precision: {precision_val:.2f}")
     canvas.itemconfig(penjelasan_model, text="Model MobileNetV2 untuk klasifikasi gambar fresh atau busuk.")
 
-    # Load dan preprocess gambar untuk prediksi
+    global model 
+    model = model_mobileNet
+
+# melakukan prediksi  
+def run_prediction():
+    global image 
+    if image is None:
+        print("Tidak ada gambar untuk diprediksi.")
+        return
+    
     if image.mode == 'RGBA':
         image = image.convert('RGB')
-
-    # Prediksi gambar baru
-    img = image.resize(input_size)
-    img_array = img_to_array(img)
-    img_array = preprocess_input(img_array)
-    img_array = np.expand_dims(img_array, axis=0)
-
-    prob = model.predict(img_array)[0][0]
-    pred = int(prob > 0.5)
-    label = 'Fresh' if pred == 1 else 'Spoiled'
     
-    # Tampilkan hasil
-    canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
-    canvas.itemconfig(kesimpulan, text=f"{label} Food")
+    global model_choices 
+    if model_choices >= 1 and model_choices < 7 :
+        user_img = image.resize((150, 150))  # resize seperti data latih
+        img_array = img_to_array(user_img) / 255.0
+        img_array = img_array.reshape(1, -1) 
+        # Prediksi gambar
+        pred = model.predict(img_array)[0]
+        prob = model.predict_proba(img_array)[0][1]
+        label = 'Fresh' if pred == 1 else 'Rotten'
+        # Hasil Prediksi
+        canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
+        canvas.itemconfig(kesimpulan, text=f"{label} Food")
+        return
+    elif model_choices == 7:
+        img_resized = image.resize((150, 150))
+        img_array = img_to_array(img_resized)
+        img_array = np.expand_dims(img_array, axis=0) / 255.0
+        pred = model.predict(img_array)[0][0]
+        if pred > 0.5:
+            result_text = "Fresh Food"
+        else:
+            result_text = "Spoiled Food"
 
-# membuka tampilan baru untuk melihat analisis kinerja setiap model    
-def run_prediction():
-    print("running")
+        # Update penjelasan prediksi
+        canvas.itemconfig(akurasi, text=f"Akurasi: {pred:.2f}")
+        canvas.itemconfig(kesimpulan, text=f"Kesimpulan: {result_text}")
+        return
+    elif model_choices == 8 or model_choices == 9:
+        img = image.resize((150, 150))
+        img_array = img_to_array(img) / 255.0
+        img_array = img_array.reshape(1, 150, 150 * 3)  # (batch_size, timesteps, features)
+
+        # Prediksi gambar user
+        prob = model.predict(img_array)[0][0]
+        pred = int(prob > 0.5)
+        label = 'Fresh' if pred == 1 else 'Spoiled'
+
+        # Tampilkan hasil
+        canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
+        canvas.itemconfig(kesimpulan, text=f"{label} Food")
+        return
+    elif model_choices == 10:
+        # Prediksi gambar baru
+        img = image.resize((224, 224))
+        img_array = img_to_array(img)
+        img_array = preprocess_input(img_array)
+        img_array = np.expand_dims(img_array, axis=0)
+
+        prob = model.predict(img_array)[0][0]
+        pred = int(prob > 0.5)
+        label = 'Fresh' if pred == 1 else 'Spoiled'
+        
+        # Tampilkan hasil
+        canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
+        canvas.itemconfig(kesimpulan, text=f"{label} Food")
+        return
+    
 
 window = Tk()
 window.geometry("960x544")
 window.configure(bg = "#FFFFFF")
 
+custom_judul = font.Font(family="Roboto", size=24*-1, weight="bold", slant="italic")
+custom_isi = font.Font(family="Roboto", size=22*-1, weight="bold", slant="italic")
 
 canvas = Canvas(
     window,
@@ -928,16 +823,16 @@ nama_model = canvas.create_text(
     anchor="nw",
     text="Model",
     fill="#E2DED3",
-    font=("Roboto BoldItalic", 28 * -1, "italic")
+    font=custom_judul
 )
 
 penjelasan_model = canvas.create_text(
-    674.0,
-    202.0,
+    368.0,
+    210.0,
     anchor="nw",
     text="Penjelasan",
     fill="#E2DED3",
-    font=("Roboto MediumItalic", 22 * -1, "italic")
+    font=custom_isi
 )
 
 nama_image = canvas.create_text(
@@ -946,7 +841,7 @@ nama_image = canvas.create_text(
     anchor="nw",
     text="Nama foto",
     fill="#E2DED3",
-    font=("Roboto MediumItalic", 22 * -1, "italic")
+    font=custom_isi
 )
 
 kesimpulan = canvas.create_text(
@@ -955,7 +850,7 @@ kesimpulan = canvas.create_text(
     anchor="nw",
     text="Kesimpulan",
     fill="#E2DED3",
-    font=("Roboto MediumItalic", 22 * -1, "italic")
+    font=custom_isi
 )
 
 akurasi = canvas.create_text(
@@ -964,7 +859,7 @@ akurasi = canvas.create_text(
     anchor="nw",
     text="Akurasi",
     fill="#E2DED3",
-    font=("Roboto MediumItalic", 22 * -1, "italic")
+    font=custom_isi
 )
 
 canvas.create_text(
@@ -973,7 +868,7 @@ canvas.create_text(
     anchor="nw",
     text="Hasil Prediksi ",
     fill="#E2DED3",
-    font=("Roboto BoldItalic", 28 * -1, "italic")
+    font=custom_judul
 )
 
 ukuran_image = canvas.create_text(
@@ -982,7 +877,7 @@ ukuran_image = canvas.create_text(
     anchor="nw",
     text="Ukuran",
     fill="#E2DED3",
-    font=("Roboto MediumItalic", 22 * -1, "italic")
+    font=custom_isi
 )
 
 precision = canvas.create_text(
@@ -991,7 +886,7 @@ precision = canvas.create_text(
     anchor="nw",
     text="Precision",
     fill="#E2DED3",
-    font=("Roboto MediumItalic", 22 * -1, "italic")
+    font=custom_isi
 )
 
 recall = canvas.create_text(
@@ -1000,7 +895,7 @@ recall = canvas.create_text(
     anchor="nw",
     text="Recall",
     fill="#E2DED3",
-    font=("Roboto MediumItalic", 22 * -1, "italic")
+    font=custom_isi
 )
 
 canvas.create_text(
@@ -1009,7 +904,7 @@ canvas.create_text(
     anchor="nw",
     text="Dataset",
     fill="#E2DED3",
-    font=("Roboto", 22 * -1, "italic")
+    font=custom_isi
 )
 
 akurasi_model = canvas.create_text(
@@ -1018,7 +913,7 @@ akurasi_model = canvas.create_text(
     anchor="nw",
     text="Akurasi Model",
     fill="#E2DED3",
-    font=("Roboto MediumItalic", 22 * -1, "italic")
+    font=custom_isi
 )
 
 button_image_1 = PhotoImage(
