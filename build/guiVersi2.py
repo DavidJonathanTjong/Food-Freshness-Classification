@@ -268,7 +268,9 @@ def run_prediction(model_config):
             label = 'Fresh' if pred == 1 else 'Rotten'
         
         # Update UI
-        canvas.itemconfig(akurasi, text=f"Akurasi: {prob:.2f}")
+        adjusted_prob = prob if pred == 1 else 1 - prob
+        
+        canvas.itemconfig(akurasi, text=f"Akurasi: {adjusted_prob:.2f}")
         canvas.itemconfig(kesimpulan, text=f"{label} Food")
     
     except Exception as e:
