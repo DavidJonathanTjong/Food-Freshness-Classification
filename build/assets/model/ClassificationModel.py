@@ -1,17 +1,17 @@
 import os
 import csv
 from pathlib import Path
-import sys
 import numpy as np
-from PIL import Image, ImageTk, ImageEnhance
-from tkinter import Tk, Canvas, Button, PhotoImage, filedialog
-from tensorflow.keras.preprocessing.image import ImageDataGenerator, img_to_array
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, SimpleRNN, LSTM, GlobalAveragePooling2D
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-from tensorflow.keras.utils import to_categorical
+# import sys
+# from PIL import Image, ImageTk, ImageEnhance
+# from tkinter import Tk, Canvas, Button, PhotoImage, filedialog
+# from tensorflow.keras.preprocessing.image import ImageDataGenerator, img_to_array
+# from tensorflow.keras.models import Sequential, Model
+# from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, SimpleRNN, LSTM, GlobalAveragePooling2D
+# from tensorflow.keras.optimizers import Adam
+# from tensorflow.keras.applications import MobileNetV2
+# from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+# from tensorflow.keras.utils import to_categorical
 import cv2
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -26,7 +26,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score
 import pickle
 
 # === Fungsi Simpan Metrik Evaluasi ===
-def save_metrics(model_name, y_true, y_pred, output_file="model_evaluation_report.csv"):
+def save_metrics(model_name, y_true, y_pred, output_file="build/assets/model/model_evaluation_report.csv"):
     accuracy = accuracy_score(y_true, y_pred)
     precision = precision_score(y_true, y_pred, zero_division=0)
     recall = recall_score(y_true, y_pred, zero_division=0)
@@ -36,7 +36,7 @@ def save_metrics(model_name, y_true, y_pred, output_file="model_evaluation_repor
         writer.writerow(row)
 
 # === Header File Evaluasi ===
-with open("model_evaluation_report.csv", mode='w', newline='') as file:
+with open("build/assets/model/model_evaluation_report.csv", mode='w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(["Model", "Accuracy", "Precision", "Recall"])
 
@@ -44,18 +44,18 @@ with open("model_evaluation_report.csv", mode='w', newline='') as file:
 IMG_SIZE = 150
 data = []
 labels = []
-base_dir = 'assets/image_collection'
+base_dir = 'build/assets/image_collection'
 
 for label in ['fresh', 'rotten']:
-    label_dir = os.path.join(base_dir, label)
-    for subfolder in os.listdir(label_dir):
-        subfolder_path = os.path.join(label_dir, subfolder)
-        if not os.path.isdir(subfolder_path):
+    label_dir = Path(base_dir) / label
+    for subfolder in Path(label_dir).iterdir():
+        if not Path(subfolder).is_dir():
             continue
-        for img_name in os.listdir(subfolder_path):
-            img_path = os.path.join(subfolder_path, img_name)
+        for img_name in os.listdir(subfolder):
+            img_path = Path(subfolder) / img_name
             try:
                 img = cv2.imread(img_path)
+                img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))
                 data.append(img)
                 labels.append(label)
             except Exception as e:
@@ -67,8 +67,6 @@ print(f"Loaded {len(data)} images.")
 
 # Preprocessing Data for Traditional ML
 def preprocess_image_traditional(image):
-    # resize image to 150x150
-    image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
     # flatten the image
     image = image.flatten()
     # normalize pixel values
