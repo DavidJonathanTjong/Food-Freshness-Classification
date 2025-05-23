@@ -3,13 +3,8 @@ import sys
 import numpy as np
 from PIL import Image, ImageTk, ImageEnhance
 from tkinter import Tk, Canvas, Button, PhotoImage, filedialog, messagebox 
-from tensorflow.keras.preprocessing.image import ImageDataGenerator, img_to_array
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, SimpleRNN, LSTM, GlobalAveragePooling2D
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-from sklearn.metrics import accuracy_score, precision_score, recall_score, classification_report
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
@@ -59,8 +54,8 @@ def open_file():
             img = Image.open(filepath).resize((275, 242))
             save_image(img)
             change_image_box(img)
-            canvas.itemconfig(nama_image, text=Path(filepath).name)
-            canvas.itemconfig(ukuran_image, text="275 x 242")
+            jenisfile = Path(filepath).suffix.replace(".", "").upper()  # Ambil ekstensi dan ubah jadi huruf besar
+            canvas.itemconfig(nama_image, text=f"Tipe Gambar: {jenisfile}")
     except Exception as e:      
         print(f"Error opening file: {e}")
 
@@ -82,10 +77,11 @@ def reset_prediction():
     selected_model_config = None
     # Reset UI texts
     texts = {
-        nama_image: "Nama foto", akurasi: "Akurasi", ukuran_image: "Ukuran",
+        nama_image: "Nama foto", akurasi_f: "Akurasi(fresh)", akurasi_r: "Akurasi(rotten)",
         kesimpulan: "Kesimpulan", nama_model: "Model", akurasi_model: "Akurasi Model",
-        recall: "Recall", precision: "Precision", penjelasan_model: "Penjelasan"
+        recall: "Recall", precision: "Precision", datasetui:"Dataset", penjelasan_model: "Penjelasan"
     }
+    print(f"Reset")
     for text_id, value in texts.items():
         canvas.itemconfig(text_id, text=value)
 
@@ -111,11 +107,13 @@ def preprocess_image_for_model(img, input_size, model_type):
     if img.mode == 'RGBA':
         img = img.convert('RGB')
     img = img.resize(input_size)
-    img_array = img_to_array(img)
+    # img_array = img_to_array(img)
+    img_array = np.array(img)
     if model_type == 'mobilenet':
         img_array = preprocess_input(img_array)
     else:
-        img_array /= 255.0
+        # img_array /= 255.0
+        img_array = img_array.astype("float32") / 255.0
     return img_array
 
 def load_model(model_path: Path):
@@ -150,8 +148,9 @@ def run_model(model_config):
         canvas.itemconfig(akurasi_model, text=f"Akurasi Model: {accuracy:.2f}")
         canvas.itemconfig(recall, text=f"Recall: {recall_val:.2f}")
         canvas.itemconfig(precision, text=f"Precision: {precision_val:.2f}")
-        canvas.itemconfig(penjelasan_model, text=model_config['description'])
-    
+        canvas.itemconfig(penjelasan_model, text=f"Penjelasan: \n{model_config['description']}")
+        canvas.itemconfig(datasetui, text="Dataset: 1680 Gambar")
+
     except Exception as e:
         print(f"Error running model {model_config['name']}: {e}")
 
@@ -160,52 +159,52 @@ MODEL_CONFIGS = {
     'rf': {
         'name': 'RandomForest',
         'type': 'rf',
-        'description': 'Model memanfaatkan fitur citra secara langsung.'
+        'description': 'Model memanfaatkan fitur \ncitra secara langsung.'
     },
     'knn': {
         'name': 'KNN',
         'type': 'knn',
-        'description': 'Model KNN secara langsung.'
+        'description': 'Model KNN secara \nlangsung.'
     },
     'dt': {
         'name': 'DecisionTree',
         'type': 'dt',
-        'description': 'Model Decision Tree secara langsung.'
+        'description': 'Model Decision Tree \nsecara langsung.'
     },
     'svm': {
         'name': 'SVM',
         'type': 'svm',
-        'description': 'Model SVM secara langsung.'
+        'description': 'Model SVM secara \nlangsung.'
     },
     'nb': {
         'name': 'NaiveBayes',
         'type': 'nb',
-        'description': 'Model Naive Bayes secara langsung.'
+        'description': 'Model Naive Bayes \nsecara langsung.'
     },
     'lr': {
         'name': 'LogisticRegression',
         'type': 'lr',
-        'description': 'Model Logistic Regression secara langsung.'
+        'description': 'Model Logistic Regression \nsecara langsung.'
     },
     'cnn': {
         'name': 'CNN',
         'type': 'cnn',
-        'description': 'Model CNN berbasis Conv2D.'
+        'description': 'Model CNN berbasis \nConv2D.'
     },
     'mobilenet': {
         'name': 'MobileNetV2',
         'type': 'mobilenet',
-        'description': 'Model MobileNetV2 dengan transfer learning.'
+        'description': 'Model MobileNetV2 \ndengan transfer learning.'
     },
     'rnn': {
         'name': 'RNN',
         'type': 'rnn',
-        'description': 'Model RNN berbasis SimpleRNN.'
+        'description': 'Model RNN berbasis \nSimpleRNN.'
     },
     'lstm': {
         'name': 'LSTM',
         'type': 'lstm',
-        'description': 'Model LSTM untuk data berurutan.'
+        'description': 'Model LSTM untuk data \nberurutan.'
     }
 }
 
@@ -239,39 +238,45 @@ def run_prediction(model_config):
             img_array = preprocess_image_for_model(image, (150, 150), model_type)
             img_array = img_array.reshape(1, -1)
 
-            pred = model.predict(img_array)[0]
-            prob = model.predict_proba(img_array)[0][1]
-            label = 'Fresh' if pred == 1 else 'Rotten'
+            prob_f = model.predict_proba(img_array)[0][0]
+            prob_r = model.predict_proba(img_array)[0][1]
+            label = 'Fresh' if prob_f > prob_r else 'Rotten'
         
         elif model_type in ['cnn']:
             model = load_model(model_path)
+            model.compile()
             img_array = preprocess_image_for_model(image, (150, 150), model_type)
             img_array = np.expand_dims(img_array, axis=0)
-            prob = model.predict(img_array, verbose=0)[0][0]
-            pred = int(prob > 0.5)
-            label = 'Fresh' if pred == 1 else 'Rotten'
+            prob_f = model.predict(img_array)[0][0]
+            prob_r = model.predict(img_array)[0][1]
+            
+            label = 'Fresh' if prob_f > prob_r else 'Rotten'
 
         elif model_type in ['mobilenet']:
             model = load_model(model_path)
+            model.compile()
             img_array = preprocess_image_for_model(image, (224, 224), model_type)
             img_array = np.expand_dims(img_array, axis=0)
-            prob = model.predict(img_array, verbose=0)[0][0]
-            pred = int(prob > 0.5)
-            label = 'Fresh' if pred == 1 else 'Rotten'
+            prob_f = model.predict(img_array)[0][0]
+            prob_r = model.predict(img_array)[0][1]
+            
+            label = 'Fresh' if prob_f > prob_r else 'Rotten'
         
         elif model_type in ['rnn', 'lstm']:
             model = load_model(model_path)
+            model.compile()
             img_array = preprocess_image_for_model(image, (150, 150), model_type)
             img_array = img_array.reshape(1, 150, 150 * 3)
-            prob = model.predict(img_array, verbose=0)[0][0]
-            pred = int(prob > 0.5)
-            label = 'Fresh' if pred == 1 else 'Rotten'
+            prob_f = model.predict(img_array)[0][0]
+            prob_r = model.predict(img_array)[0][1]
+            
+            label = 'Fresh' if prob_f > prob_r else 'Rotten'
         
         # Update UI
-        adjusted_prob = prob if pred == 1 else 1 - prob
-        
-        canvas.itemconfig(akurasi, text=f"Akurasi: {adjusted_prob:.2f}")
-        canvas.itemconfig(kesimpulan, text=f"{label} Food")
+        print(f"Running model")
+        canvas.itemconfig(akurasi_f, text=f"Akurasi(fresh): {prob_f:.2f}")
+        canvas.itemconfig(akurasi_r, text=f"Akurasi(rotten): {prob_r:.2f}")
+        canvas.itemconfig(kesimpulan, text=f"Kesimpulan: {label} Food")
     
     except Exception as e:
         print(f"Error running model {model_config['name']}: {e}")
@@ -291,7 +296,7 @@ def select_model(config):
     run_model(config)
 
 def setup_ui():
-    global canvas, nama_image, kesimpulan, akurasi, ukuran_image
+    global canvas, nama_image, kesimpulan, akurasi_f, akurasi_r, datasetui
     global precision, recall, akurasi_model, nama_model, penjelasan_model, image_6
 
     window = Tk()
@@ -326,21 +331,21 @@ def setup_ui():
                                     font=("Roboto BoldItalic", -28, "italic"))
     penjelasan_model = canvas.create_text(674.0, 202.0, anchor="nw", text="Penjelasan", fill="#E2DED3",
                                           font=("Roboto MediumItalic", -22, "italic"))
-    nama_image = canvas.create_text(368.0, 124.0, anchor="nw", text="Nama foto", fill="#E2DED3",
+    nama_image = canvas.create_text(368.0, 150.0, anchor="nw", text="Nama foto", fill="#E2DED3",
                                     font=("Roboto MediumItalic", -22, "italic"))
     kesimpulan = canvas.create_text(368.0, 176.0, anchor="nw", text="Kesimpulan", fill="#E2DED3",
                                     font=("Roboto MediumItalic", -22, "italic"))
-    akurasi = canvas.create_text(368.0, 98.0, anchor="nw", text="Akurasi", fill="#E2DED3",
+    akurasi_f = canvas.create_text(368.0, 98.0, anchor="nw", text="Akurasi(fresh)", fill="#E2DED3",
                                  font=("Roboto MediumItalic", -22, "italic"))
     canvas.create_text(368.0, 65.0, anchor="nw", text="Hasil Prediksi", fill="#E2DED3",
                        font=("Roboto BoldItalic", -28, "italic"))
-    ukuran_image = canvas.create_text(368.0, 150.0, anchor="nw", text="Ukuran", fill="#E2DED3",
+    akurasi_r = canvas.create_text(368.0, 124.0, anchor="nw", text="Akurasi(rotten)", fill="#E2DED3",
                                       font=("Roboto MediumItalic", -22, "italic"))
     precision = canvas.create_text(674.0, 150.0, anchor="nw", text="Precision", fill="#E2DED3",
                                    font=("Roboto MediumItalic", -22, "italic"))
     recall = canvas.create_text(674.0, 124.0, anchor="nw", text="Recall", fill="#E2DED3",
                                 font=("Roboto MediumItalic", -22, "italic"))
-    canvas.create_text(674.0, 176.0, anchor="nw", text="Dataset", fill="#E2DED3",
+    datasetui = canvas.create_text(674.0, 176.0, anchor="nw", text="Dataset", fill="#E2DED3",
                        font=("Roboto", -22, "italic"))
     akurasi_model = canvas.create_text(674.0, 98.0, anchor="nw", text="Akurasi Model", fill="#E2DED3",
                                        font=("Roboto MediumItalic", -22, "italic"))
